@@ -1,0 +1,57 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+
+# shellcheck source=/dev/null
+source /etc/s6-overlay/scripts/bash-functions
+
+set -e
+
+umask "${UMASK}"
+
+echo "
+----------------------------------------------------------------------
+ENVIRONMENT APP
+----------------------------------------------------------------------
+WEBUI_PORTS=${WEBUI_PORTS}
+----------------------------------------------------------------------
+"
+
+# ── Data directory ──────────────────────────────────────────────────
+mkdir -p "${CONFIG_DIR}/data"
+
+# ── SECRET_KEY auto-generation ──────────────────────────────────────
+if [[ -z "${SECRET_KEY}" ]]; then
+    SECRET_KEY_FILE="${CONFIG_DIR}/data/.secret_key"
+    if [[ -f "${SECRET_KEY_FILE}" ]]; then
+        log_inf "Loading SECRET_KEY from ${SECRET_KEY_FILE}"
+        SECRET_KEY=$(cat "${SECRET_KEY_FILE}")
+    else
+        log_inf "Generating new SECRET_KEY..."
+        SECRET_KEY=$("${APP_DIR}/backend/.venv/bin/python" -c "import secrets; print(secrets.token_urlsafe(48))")
+        echo "${SECRET_KEY}" > "${SECRET_KEY_FILE}"
+        chmod 600 "${SECRET_KEY_FILE}"
+    fi
+    printf '%s' "${SECRET_KEY}" > /var/run/s6/container_environment/SECRET_KEY
+fi
+
+# ── DATABASE_URL default (SQLite in /config/data/) ──────────────────
+if [[ -z "${DATABASE_URL}" ]]; then
+    DATABASE_URL="sqlite+aiosqlite:///${CONFIG_DIR}/data/zondarr.db"
+    printf '%s' "${DATABASE_URL}" > /var/run/s6/container_environment/DATABASE_URL
+    log_inf "DATABASE_URL defaulting to SQLite at ${CONFIG_DIR}/data/zondarr.db"
+fi
+
+# ── PUBLIC_API_URL default ──────────────────────────────────────────
+# SSR server-side fetch needs to reach the backend; default to localhost
+if [[ -z "${PUBLIC_API_URL}" ]]; then
+    printf '%s' "http://localhost:8000" > /var/run/s6/container_environment/PUBLIC_API_URL
+    log_inf "PUBLIC_API_URL defaulting to http://localhost:8000"
+fi
+
+# ── Alembic database migration ─────────────────────────────────────
+log_inf "Running database migrations..."
+cd "${APP_DIR}/backend" || exit 1
+s6-setuidgid hotio "${APP_DIR}/backend/.venv/bin/python" -m alembic upgrade head
+
+# ── Fix ownership ───────────────────────────────────────────────────
+find "${CONFIG_DIR}/data" \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +

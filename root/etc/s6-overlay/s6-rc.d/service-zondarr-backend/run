@@ -1,0 +1,15 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+
+umask "${UMASK}"
+
+cd "${APP_DIR}/backend" || exit 1
+
+exec s6-setuidgid hotio \
+    "${APP_DIR}/backend/.venv/bin/python" -m granian \
+    zondarr.app:app \
+    --interface asgi \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 1 \
+    --log-level info
