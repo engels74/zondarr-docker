@@ -1,11 +1,11 @@
 {
-  "description": "Releases",
-  "latest": true,
+  "description": "Every commit to main",
+  "latest": false,
   "test_amd64": true,
   "test_arm64": true,
   "test_url": "http://localhost:3000",
   "upstream_image": "ghcr.io/engels74/base-image",
   "upstream_tag": "alpinevpn",
   "upstream_tag_sha": "alpinevpn-6d5cbf5",
-  "version": "0.0.0"
+  "version": "20683f82f93a03e9f954c1f50c75a199cab77deb"
 }
