@@ -23,7 +23,7 @@ RUN mkdir /build && \
       | tar xzf - -C "/build" --strip-components=1
 WORKDIR /build/backend
 ENV UV_PYTHON_INSTALL_DIR=/opt/python
-RUN uv sync --python 3.14 --no-dev --frozen --compile-bytecode
+RUN uv sync --python 3.14 --no-dev --frozen --compile-bytecode --no-editable
 
 # ── Stage 3: Runtime ───────────────────────────────────────────────
 FROM ${UPSTREAM_IMAGE}:${UPSTREAM_TAG_SHA}
@@ -41,9 +41,8 @@ RUN apk add --no-cache curl unzip && \
 # Standalone Python 3.14 (musl) from builder
 COPY --from=backend-builder /opt/python /opt/python
 
-# Backend: venv + source + migrations
+# Backend: venv + migrations
 COPY --from=backend-builder /build/backend/.venv "${APP_DIR}/backend/.venv"
-COPY --from=backend-builder /build/backend/src "${APP_DIR}/backend/src"
 COPY --from=backend-builder /build/backend/migrations "${APP_DIR}/backend/migrations"
 COPY --from=backend-builder /build/backend/alembic.ini "${APP_DIR}/backend/alembic.ini"
 COPY --from=backend-builder /build/backend/pyproject.toml "${APP_DIR}/backend/pyproject.toml"
