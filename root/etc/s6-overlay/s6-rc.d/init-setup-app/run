@@ -32,12 +32,14 @@ if [[ -z "${SECRET_KEY}" ]]; then
         echo "${SECRET_KEY}" > "${SECRET_KEY_FILE}"
         chmod 600 "${SECRET_KEY_FILE}"
     fi
+    export SECRET_KEY
     printf '%s' "${SECRET_KEY}" > /var/run/s6/container_environment/SECRET_KEY
 fi
 
 # ── DATABASE_URL default (SQLite in /config/data/) ──────────────────
 if [[ -z "${DATABASE_URL}" ]]; then
     DATABASE_URL="sqlite+aiosqlite:///${CONFIG_DIR}/data/zondarr.db"
+    export DATABASE_URL
     printf '%s' "${DATABASE_URL}" > /var/run/s6/container_environment/DATABASE_URL
     log_inf "DATABASE_URL defaulting to SQLite at ${CONFIG_DIR}/data/zondarr.db"
 fi
@@ -48,33 +50,6 @@ if [[ -z "${PUBLIC_API_URL}" ]]; then
     printf '%s' "http://localhost:8000" > /var/run/s6/container_environment/PUBLIC_API_URL
     log_inf "PUBLIC_API_URL defaulting to http://localhost:8000"
 fi
-
-# ── DEBUG: Diagnose migration environment ─────────────────────────────
-echo "
-----------------------------------------------------------------------
-DEBUG: MIGRATION DIAGNOSTICS
-----------------------------------------------------------------------"
-log_inf "DEBUG: Current working directory: $(pwd)"
-log_inf "DEBUG: Current user: $(whoami) ($(id))"
-log_inf "DEBUG: DATABASE_URL shell variable: ${DATABASE_URL}"
-log_inf "DEBUG: DATABASE_URL in environment: $(env | grep '^DATABASE_URL=' || echo 'NOT EXPORTED')"
-log_inf "DEBUG: CONFIG_DIR=${CONFIG_DIR}"
-log_inf "DEBUG: APP_DIR=${APP_DIR}"
-
-log_inf "DEBUG: /config/data/ exists: $(test -d /config/data && echo 'YES' || echo 'NO')"
-if [[ -d "/config/data" ]]; then
-    log_inf "DEBUG: /config/data/ permissions: $(ls -ld /config/data)"
-    log_inf "DEBUG: /config/data/ contents:"
-    ls -la /config/data/ 2>&1 | while IFS= read -r line; do log_inf "DEBUG:   ${line}"; done
-fi
-
-log_inf "DEBUG: /config/ directory structure:"
-find /config/ -maxdepth 3 -ls 2>&1 | while IFS= read -r line; do log_inf "DEBUG:   ${line}"; done
-
-log_inf "DEBUG: What Alembic subprocess will see as DATABASE_URL:"
-s6-setuidgid hotio env | grep '^DATABASE_URL=' || log_inf "DEBUG: >>> DATABASE_URL NOT VISIBLE to child process <<<"
-
-echo "----------------------------------------------------------------------"
 
 # ── Alembic database migration ─────────────────────────────────────
 log_inf "Running database migrations..."
