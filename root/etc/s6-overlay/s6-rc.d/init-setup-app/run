@@ -18,6 +18,7 @@ WEBUI_PORTS=${WEBUI_PORTS}
 
 # ── Data directory ──────────────────────────────────────────────────
 mkdir -p "${CONFIG_DIR}/data"
+find "${CONFIG_DIR}/data" \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
 
 # ── SECRET_KEY auto-generation ──────────────────────────────────────
 if [[ -z "${SECRET_KEY}" ]]; then
@@ -52,6 +53,3 @@ fi
 log_inf "Running database migrations..."
 cd "${APP_DIR}/backend" || exit 1
 s6-setuidgid hotio "${APP_DIR}/backend/.venv/bin/python" -m alembic upgrade head
-
-# ── Fix ownership ───────────────────────────────────────────────────
-find "${CONFIG_DIR}/data" \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
