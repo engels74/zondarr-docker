@@ -9,4 +9,15 @@ cd "${APP_DIR}/frontend" || exit 1
 export HOST="0.0.0.0"
 export PORT="3000"
 
+# Wait for backend to accept connections
+echo "[frontend] Waiting for backend..."
+for i in $(seq 1 30); do
+    if wget -q -O /dev/null http://localhost:8000/health/live 2>/dev/null; then
+        echo "[frontend] Backend ready"
+        break
+    fi
+    [ "$i" -eq 30 ] && echo "[frontend] WARNING: Backend not ready after 30s, starting anyway"
+    sleep 1
+done
+
 exec s6-setuidgid hotio bun ./build/index.js
