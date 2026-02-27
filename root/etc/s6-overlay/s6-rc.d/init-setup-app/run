@@ -18,6 +18,7 @@ WEBUI_PORTS=${WEBUI_PORTS}
 
 # ── Data directory ──────────────────────────────────────────────────
 mkdir -p "${CONFIG_DIR}/data"
+find "${CONFIG_DIR}/data" \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
 
 # ── SECRET_KEY auto-generation ──────────────────────────────────────
 if [[ -z "${SECRET_KEY}" ]]; then
@@ -31,12 +32,14 @@ if [[ -z "${SECRET_KEY}" ]]; then
         echo "${SECRET_KEY}" > "${SECRET_KEY_FILE}"
         chmod 600 "${SECRET_KEY_FILE}"
     fi
+    export SECRET_KEY
     printf '%s' "${SECRET_KEY}" > /var/run/s6/container_environment/SECRET_KEY
 fi
 
 # ── DATABASE_URL default (SQLite in /config/data/) ──────────────────
 if [[ -z "${DATABASE_URL}" ]]; then
     DATABASE_URL="sqlite+aiosqlite:///${CONFIG_DIR}/data/zondarr.db"
+    export DATABASE_URL
     printf '%s' "${DATABASE_URL}" > /var/run/s6/container_environment/DATABASE_URL
     log_inf "DATABASE_URL defaulting to SQLite at ${CONFIG_DIR}/data/zondarr.db"
 fi
@@ -52,6 +55,3 @@ fi
 log_inf "Running database migrations..."
 cd "${APP_DIR}/backend" || exit 1
 s6-setuidgid hotio "${APP_DIR}/backend/.venv/bin/python" -m alembic upgrade head
-
-# ── Fix ownership ───────────────────────────────────────────────────
-find "${CONFIG_DIR}/data" \( ! -user hotio -or ! -group hotio \) -exec chown hotio:hotio {} +
