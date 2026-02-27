@@ -44,12 +44,18 @@ if [[ -z "${DATABASE_URL}" ]]; then
     log_inf "DATABASE_URL defaulting to SQLite at ${CONFIG_DIR}/data/zondarr.db"
 fi
 
-# ── PUBLIC_API_URL default ──────────────────────────────────────────
-# SSR server-side fetch needs to reach the backend; default to localhost
-if [[ -z "${PUBLIC_API_URL}" ]]; then
-    printf '%s' "http://localhost:8000" > /var/run/s6/container_environment/PUBLIC_API_URL
-    log_inf "PUBLIC_API_URL defaulting to http://localhost:8000"
+# ── API URL defaults ─────────────────────────────────────────────
+# INTERNAL_API_URL: used by the SvelteKit server to reach the backend
+# (server-side rendering and API proxy). Always localhost inside the container.
+if [[ -z "${INTERNAL_API_URL}" ]]; then
+    printf '%s' "http://localhost:8000" > /var/run/s6/container_environment/INTERNAL_API_URL
+    log_inf "INTERNAL_API_URL defaulting to http://localhost:8000"
 fi
+
+# PUBLIC_API_URL: when empty, the frontend proxies /api/* requests through
+# SvelteKit (same-origin, no CORS needed). Only set this if you need the
+# browser to talk directly to the backend (requires CORS_ORIGINS too).
+# Do NOT set a default here — empty enables the proxy.
 
 # ── Alembic database migration ─────────────────────────────────────
 log_inf "Running database migrations..."
