@@ -7,5 +7,5 @@
   "upstream_image": "ghcr.io/engels74/base-image",
   "upstream_tag": "alpinevpn",
   "upstream_tag_sha": "alpinevpn-167fa4e",
-  "version": "cc4866502dd6ec6b2f85310a2f78d2bc65b9deec"
+  "version": "fcc60129dd4773c55659c1aab6d084172558e8a1"
 }
