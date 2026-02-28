@@ -32,6 +32,8 @@ services:
       # - SECRET_KEY=           # Auto-generated on first run, persisted to /config/data/.secret_key
       # - DATABASE_URL=         # Default: SQLite at /config/data/zondarr.db
       # - PUBLIC_API_URL=       # Default: http://localhost:8000 (override for remote/reverse-proxy setups)
+      # - SECURE_COOKIES=true   # Set when serving over HTTPS (enforces Secure flag on cookies)
+      # - CSRF_ORIGIN=https://zondarr.example.com  # Required for HTTPS with a custom domain
     volumes:
       - ./config:/config
     restart: unless-stopped
@@ -48,6 +50,8 @@ services:
 | `SECRET_KEY` | *(auto-generated)* | JWT signing key. Auto-generated on first run and persisted to `/config/data/.secret_key`. Set explicitly to override. |
 | `DATABASE_URL` | `sqlite+aiosqlite:///config/data/zondarr.db` | Database connection string. Supports SQLite (default) and PostgreSQL. |
 | `PUBLIC_API_URL` | `http://localhost:8000` | URL the frontend SSR server uses to reach the backend. Override when using a reverse proxy or remote deployment. |
+| `SECURE_COOKIES` | `false` | Set to `true` when serving over HTTPS to enforce the Secure flag on cookies. |
+| `CSRF_ORIGIN` | *(none)* | Trusted origin for CSRF protection (e.g., `https://zondarr.example.com`). Required for HTTPS with a custom domain. |
 
 ## Ports
 
