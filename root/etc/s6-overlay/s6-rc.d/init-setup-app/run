@@ -31,26 +31,34 @@ if [[ -z "${SECRET_KEY}" ]]; then
         SECRET_KEY=$("${APP_DIR}/backend/.venv/bin/python" -c "import secrets; print(secrets.token_urlsafe(48))")
         echo "${SECRET_KEY}" > "${SECRET_KEY_FILE}"
         chmod 600 "${SECRET_KEY_FILE}"
+        chown hotio:hotio "${SECRET_KEY_FILE}"
     fi
     export SECRET_KEY
     printf '%s' "${SECRET_KEY}" > /var/run/s6/container_environment/SECRET_KEY
 fi
 
 # ── BOOTSTRAP_TOKEN auto-generation ───────────────────────────────────
+BOOTSTRAP_TOKEN_FILE="${CONFIG_DIR}/data/.bootstrap_token"
+
 if [[ -z "${BOOTSTRAP_TOKEN}" ]]; then
-    BOOTSTRAP_TOKEN_FILE="${CONFIG_DIR}/data/.bootstrap_token"
     if [[ -f "${BOOTSTRAP_TOKEN_FILE}" ]]; then
         log_inf "Loading BOOTSTRAP_TOKEN from ${BOOTSTRAP_TOKEN_FILE}"
         BOOTSTRAP_TOKEN=$(cat "${BOOTSTRAP_TOKEN_FILE}")
     else
         log_inf "Generating new BOOTSTRAP_TOKEN..."
         BOOTSTRAP_TOKEN=$("${APP_DIR}/backend/.venv/bin/python" -c "import secrets; print(secrets.token_urlsafe(32))")
-        echo "${BOOTSTRAP_TOKEN}" > "${BOOTSTRAP_TOKEN_FILE}"
-        chmod 600 "${BOOTSTRAP_TOKEN_FILE}"
     fi
-    export BOOTSTRAP_TOKEN
-    printf '%s' "${BOOTSTRAP_TOKEN}" > /var/run/s6/container_environment/BOOTSTRAP_TOKEN
 fi
+
+# Always write token to file and fix ownership (handles auto-generated, loaded, or user-provided tokens)
+echo "${BOOTSTRAP_TOKEN}" > "${BOOTSTRAP_TOKEN_FILE}"
+chmod 600 "${BOOTSTRAP_TOKEN_FILE}"
+chown hotio:hotio "${BOOTSTRAP_TOKEN_FILE}"
+
+export BOOTSTRAP_TOKEN
+export BOOTSTRAP_TOKEN_FILE
+printf '%s' "${BOOTSTRAP_TOKEN}" > /var/run/s6/container_environment/BOOTSTRAP_TOKEN
+printf '%s' "${BOOTSTRAP_TOKEN_FILE}" > /var/run/s6/container_environment/BOOTSTRAP_TOKEN_FILE
 
 # ── DATABASE_URL default (SQLite in /config/data/) ──────────────────
 if [[ -z "${DATABASE_URL}" ]]; then
