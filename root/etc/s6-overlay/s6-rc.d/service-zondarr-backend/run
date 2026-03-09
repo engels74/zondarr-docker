@@ -11,5 +11,10 @@ exec s6-setuidgid hotio \
     --interface asgi \
     --host 0.0.0.0 \
     --port 8000 \
-    --workers 1 \
+    --workers "${GRANIAN_WORKERS:-1}" \
+    --runtime-mode st \
+    --backpressure 16 \
+    --respawn-failed-workers \
+    --workers-kill-timeout 10 \
+    --workers-lifetime 6h \
     --log-level info

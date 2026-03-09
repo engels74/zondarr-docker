@@ -34,6 +34,8 @@ services:
       # - PUBLIC_API_URL=       # Default: http://localhost:8000 (override for remote/reverse-proxy setups)
       # - SECURE_COOKIES=true   # Set when serving over HTTPS (enforces Secure flag on cookies)
       # - CSRF_ORIGIN=https://zondarr.example.com  # Required for HTTPS with a custom domain
+      # - PLEX_API_TIMEOUT_SECONDS=30  # Timeout for Plex API calls (min: 5)
+      # - GRANIAN_WORKERS=1            # Worker processes (keep 1 for SQLite)
     volumes:
       - ./config:/config
     restart: unless-stopped
@@ -52,6 +54,8 @@ services:
 | `PUBLIC_API_URL` | `http://localhost:8000` | URL the frontend SSR server uses to reach the backend. Override when using a reverse proxy or remote deployment. |
 | `SECURE_COOKIES` | `false` | Set to `true` when serving over HTTPS to enforce the Secure flag on cookies. |
 | `CSRF_ORIGIN` | *(none)* | Trusted origin for CSRF protection (e.g., `https://zondarr.example.com`). Required for HTTPS with a custom domain. |
+| `PLEX_API_TIMEOUT_SECONDS` | `30` | Timeout in seconds for Plex API requests. Minimum: 5. Increase for slow/remote Plex servers. |
+| `GRANIAN_WORKERS` | `1` | Number of Granian worker processes. Keep at 1 for SQLite. Increase to match CPU cores when using PostgreSQL. |
 
 ## Ports
 
