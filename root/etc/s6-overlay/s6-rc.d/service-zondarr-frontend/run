@@ -5,8 +5,8 @@ umask "${UMASK}"
 
 cd "${APP_DIR}/frontend" || exit 1
 
-# Override HOST/PORT to avoid conflict with backend env vars
+# Override HOST/PORT for the Bun/SvelteKit server
 export HOST="0.0.0.0"
-export PORT="3000"
+export PORT="${FRONTEND_PORT}"
 
 exec s6-setuidgid hotio bun ./build/index.js

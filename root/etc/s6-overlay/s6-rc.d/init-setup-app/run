@@ -8,10 +8,18 @@ set -e
 
 umask "${UMASK}"
 
+# Update WEBUI_PORTS if ports were changed from defaults
+if [[ "${FRONTEND_PORT}" != "3000" || "${BACKEND_PORT}" != "8000" ]]; then
+    WEBUI_PORTS="${FRONTEND_PORT}/tcp,${FRONTEND_PORT}/udp,${BACKEND_PORT}/tcp,${BACKEND_PORT}/udp"
+    printf '%s' "${WEBUI_PORTS}" > /var/run/s6/container_environment/WEBUI_PORTS
+fi
+
 echo "
 ----------------------------------------------------------------------
 ENVIRONMENT APP
 ----------------------------------------------------------------------
+FRONTEND_PORT=${FRONTEND_PORT}
+BACKEND_PORT=${BACKEND_PORT}
 WEBUI_PORTS=${WEBUI_PORTS}
 ----------------------------------------------------------------------
 "
@@ -47,8 +55,8 @@ fi
 # ── PUBLIC_API_URL default ──────────────────────────────────────────
 # SSR server-side fetch needs to reach the backend; default to localhost
 if [[ -z "${PUBLIC_API_URL}" ]]; then
-    printf '%s' "http://localhost:8000" > /var/run/s6/container_environment/PUBLIC_API_URL
-    log_inf "PUBLIC_API_URL defaulting to http://localhost:8000"
+    printf '%s' "http://localhost:${BACKEND_PORT}" > /var/run/s6/container_environment/PUBLIC_API_URL
+    log_inf "PUBLIC_API_URL defaulting to http://localhost:${BACKEND_PORT}"
 fi
 
 # ── Alembic database migration ─────────────────────────────────────
