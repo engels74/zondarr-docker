@@ -8,10 +8,18 @@ set -e
 
 umask "${UMASK}"
 
+# Update WEBUI_PORTS if ports were changed from defaults
+if [[ "${FRONTEND_PORT}" != "3000" || "${BACKEND_PORT}" != "8000" ]]; then
+    WEBUI_PORTS="${FRONTEND_PORT}/tcp,${FRONTEND_PORT}/udp,${BACKEND_PORT}/tcp,${BACKEND_PORT}/udp"
+    printf '%s' "${WEBUI_PORTS}" > /var/run/s6/container_environment/WEBUI_PORTS
+fi
+
 echo "
 ----------------------------------------------------------------------
 ENVIRONMENT APP
 ----------------------------------------------------------------------
+FRONTEND_PORT=${FRONTEND_PORT}
+BACKEND_PORT=${BACKEND_PORT}
 WEBUI_PORTS=${WEBUI_PORTS}
 ----------------------------------------------------------------------
 "
@@ -72,8 +80,8 @@ fi
 # INTERNAL_API_URL: used by the SvelteKit server to reach the backend
 # (server-side rendering and API proxy). Always localhost inside the container.
 if [[ -z "${INTERNAL_API_URL}" ]]; then
-    printf '%s' "http://localhost:8000" > /var/run/s6/container_environment/INTERNAL_API_URL
-    log_inf "INTERNAL_API_URL defaulting to http://localhost:8000"
+    printf '%s' "http://localhost:${BACKEND_PORT}" > /var/run/s6/container_environment/INTERNAL_API_URL
+    log_inf "INTERNAL_API_URL defaulting to http://localhost:${BACKEND_PORT}"
 fi
 
 # PUBLIC_API_URL: when empty, the frontend proxies /api/* requests through

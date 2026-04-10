@@ -27,10 +27,12 @@ RUN uv sync --python 3.14 --no-dev --frozen --compile-bytecode --no-editable
 
 # ── Stage 3: Runtime ───────────────────────────────────────────────
 FROM ${UPSTREAM_IMAGE}:${UPSTREAM_TAG_SHA}
-EXPOSE 3000 8000
 ARG IMAGE_STATS
 ENV IMAGE_STATS=${IMAGE_STATS} \
+    FRONTEND_PORT=3000 \
+    BACKEND_PORT=8000 \
     WEBUI_PORTS="3000/tcp,3000/udp,8000/tcp,8000/udp"
+EXPOSE ${FRONTEND_PORT} ${BACKEND_PORT}
 
 # Bun runtime
 RUN apk add --no-cache curl unzip && \

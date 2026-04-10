@@ -5,14 +5,14 @@ umask "${UMASK}"
 
 cd "${APP_DIR}/frontend" || exit 1
 
-# Override HOST/PORT to avoid conflict with backend env vars
+# Override HOST/PORT for the Bun/SvelteKit server
 export HOST="0.0.0.0"
-export PORT="3000"
+export PORT="${FRONTEND_PORT}"
 
 # Wait for backend to accept connections
 echo "[frontend] Waiting for backend..."
 for i in $(seq 1 30); do
-    if wget -q -O /dev/null http://localhost:8000/health/live 2>/dev/null; then
+    if wget -q -O /dev/null "http://localhost:${BACKEND_PORT}/health/live" 2>/dev/null; then
         echo "[frontend] Backend ready"
         break
     fi
