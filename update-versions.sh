@@ -1,8 +1,0 @@
-#!/bin/bash
-set -exuo pipefail
-
-version=$(curl -fsSL "https://api.github.com/repos/engels74/zondarr/commits/main" | jq -re .sha)
-json=$(cat meta.json)
-jq --sort-keys \
-    --arg version "${version}" \
-    '.version = $version' <<< "${json}" | tee meta.json
