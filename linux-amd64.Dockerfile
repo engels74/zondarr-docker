@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 # check=skip=InvalidDefaultArgInFrom
 ARG UPSTREAM_IMAGE
-ARG UPSTREAM_TAG_SHA
+ARG UPSTREAM_DIGEST_AMD64
+ARG UPSTREAM_DIGEST_ARM64
 ARG BUN_IMAGE=oven/bun:1.4.2-alpine@sha256:d888c0ae6c86d7866ff10c5aafdd9077b36aee6455b33dd270fb93c0dd5cef6f
 ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.12.10-alpine@sha256:3d372c685653f7c66ed18c4395a3099e33f9dd9a9b3a8d43238c319918b9e182
 
@@ -13,7 +14,7 @@ RUN apk add --no-cache curl
 ARG VERSION
 ARG SOURCE_SHA256
 RUN mkdir /source && \
-    curl -fsSL "https://github.com/engels74/zondarr/archive/${VERSION}.tar.gz" -o /tmp/source.tar.gz && \
+    curl -fsSL "https://github.com/edbfi/zondarr/archive/${VERSION}.tar.gz" -o /tmp/source.tar.gz && \
     echo "${SOURCE_SHA256}  /tmp/source.tar.gz" | sha256sum -c - && \
     tar xzf /tmp/source.tar.gz -C /source --strip-components=1 && \
     rm /tmp/source.tar.gz
@@ -40,7 +41,7 @@ ENV UV_PYTHON_INSTALL_DIR=/opt/python
 COPY --from=source /source/backend/ ./
 RUN uv sync --python 3.14.7 --no-dev --frozen --compile-bytecode --no-editable
 
-FROM ${UPSTREAM_IMAGE}:${UPSTREAM_TAG_SHA}
+FROM ${UPSTREAM_IMAGE}@${UPSTREAM_DIGEST_AMD64}
 ARG IMAGE_STATS
 ENV IMAGE_STATS=${IMAGE_STATS} \
     NODE_ENV=production \

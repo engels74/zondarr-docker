@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: GPL-3.0-only
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [release, nightly]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  hygiene:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tools -p 'test_*.py'
+      - run: python3 -m py_compile tools/smoke.py
+      - name: Workflow lint
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          "$(go env GOPATH)/bin/actionlint"
+      - name: Commit conventions and sign-off
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          base="$BASE"
+          if [[ -z "$base" || "$base" == 0000000000000000000000000000000000000000 ]]; then
+            base="$(git rev-parse "$HEAD^")"
+          fi
+          for commit in $(git rev-list "$base..$HEAD"); do
+            git show -s --format=%s "$commit" | grep -Eq '^(feat|fix|chore|docs|test|refactor|perf|build|ci|style|revert)(\([^)]*\))?!?: .+'
+            author="$(git show -s --format='%an <%ae>' "$commit")"
+            git show -s --format=%B "$commit" | grep -Fx "Signed-off-by: $author"
+          done
+      - run: git diff --exit-code HEAD
+  image:
+    uses: ./.github/workflows/build-on-call.yml
+    with:
+      image: ${{ github.base_ref || github.ref_name }}
+      ref: ${{ github.sha }}
+  required:
+    name: ci / required
+    if: always()
+    needs: [hygiene, image]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: edbfi/automation/actions/gate@v1.0.0
+        with:
+          needs: ${{ toJSON(needs) }}
+          required: hygiene image
+defaults:
+  run:
+    shell: bash
