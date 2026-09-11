@@ -30,6 +30,8 @@ def state():
 try:
  docker('network','create','--internal',network);docker('volume','create',volume);start()
  result['checks'].append({'fresh':ready(True)})
+ (r/'packages.txt').write_text(docker('exec',name,'apk','info','-v')+'\n')
+ (r/'python-packages.json').write_text(docker('exec',name,'/app/backend/.venv/bin/python','-c',"import importlib.metadata,json;print(json.dumps(sorted((d.metadata['Name'],d.version) for d in importlib.metadata.distributions())))")+'\n')
  info=py("import json,sys,sysconfig,zondarr,msgspec,granian,cryptography,argon2,greenlet,asyncpg;print(json.dumps({'python':sys.version.split()[0],'platform':sysconfig.get_platform(),'package':zondarr.__path__[0]}))")
  assert info['python']=='3.14.7' and '/site-packages/zondarr' in info['package'],info
  runtime=js("import {readFileSync,readdirSync} from 'node:fs';let services=[];for(const p of readdirSync('/proc').filter(n=>/^\\d+$/.test(n))){try{const cmd=readFileSync('/proc/'+p+'/cmdline','utf8').split('\\0');if((cmd[0]==='bun'&&cmd[1]==='./build/index.js')||(cmd[0]==='/app/backend/.venv/bin/python'&&cmd[1]==='-m'))services.push({cmd,uid:readFileSync('/proc/'+p+'/status','utf8').match(/Uid:\\s+(\\d+)/)[1]})}catch{}}console.log(JSON.stringify({bun:Bun.version,arch:process.arch,production:process.env.NODE_ENV,services}))")
@@ -50,6 +52,7 @@ try:
  start();ready(False);assert state()==initial
  result['checks'].append({'replacement_persisted':True,'stop_seconds':stop()});save_log('replacement')
  result['passed']=True
+ (r/'result.txt').write_text('PASS: native dual-service setup/migrations/keys/admin persistence/clean shutdown\n')
 finally:
  save_log('final');docker('stop','--time','20',name,check=False);docker('rm',name,check=False);docker('network','rm',network,check=False)
  (r/'runtime-result.json').write_text(json.dumps(result,indent=2))
