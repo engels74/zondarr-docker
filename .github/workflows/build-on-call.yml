@@ -1,0 +1,97 @@
+# SPDX-License-Identifier: GPL-3.0-only
+name: build-on-call
+on:
+  workflow_call:
+    inputs:
+      image:
+        type: string
+        required: true
+      ref:
+        type: string
+        required: true
+      export_image:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          repository: edbfi/zondarr-docker
+          ref: ${{ github.sha }}
+          path: tooling
+          persist-credentials: false
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          path: image
+          persist-credentials: false
+      - name: Validate metadata
+        id: metadata
+        env:
+          IMAGE: ${{ inputs.image }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          python3 tooling/tools/image_metadata.py --root image \
+            --repository "$GITHUB_REPOSITORY" --branch "$IMAGE" \
+            --revision "$(git -C image rev-parse HEAD)" --arch "$ARCH" --output evidence
+          test -f "image/linux-$ARCH.Dockerfile"
+          {
+            echo 'build_args<<BUILD_ARGS'
+            cat evidence/build-args.txt
+            echo BUILD_ARGS
+            echo "revision=$(git -C image rev-parse HEAD)"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v4.3.0
+      - name: Build without publishing
+        uses: docker/build-push-action@v7.3.0
+        with:
+          context: image
+          file: image/linux-${{ matrix.arch }}.Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          load: true
+          push: false
+          provenance: false
+          tags: local-validation:${{ inputs.image }}-${{ matrix.arch }}
+          build-args: ${{ steps.metadata.outputs.build_args }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.documentation=https://web.edb.fi/containers/zondarr/
+            org.opencontainers.image.vendor=edbfi
+            org.opencontainers.image.revision=${{ steps.metadata.outputs.revision }}
+          cache-from: type=gha,scope=${{ inputs.image }}-${{ matrix.arch }}
+          cache-to: type=gha,scope=${{ inputs.image }}-${{ matrix.arch }},mode=max
+      - name: Smoke test and package inventory
+        env:
+          IMAGE: ${{ inputs.image }}
+          ARCH: ${{ matrix.arch }}
+        working-directory: tooling
+        run: python3 tools/smoke.py "local-validation:$IMAGE-$ARCH" ../evidence "$ARCH"
+      - name: Retain tested image for publication
+        if: inputs.export_image
+        env:
+          IMAGE: ${{ inputs.image }}
+          ARCH: ${{ matrix.arch }}
+        run: docker save "local-validation:$IMAGE-$ARCH" -o evidence/image.tar
+      - uses: actions/upload-artifact@v7.0.1
+        if: always()
+        with:
+          name: ${{ inputs.image }}-${{ matrix.arch }}
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 7
+defaults:
+  run:
+    shell: bash
